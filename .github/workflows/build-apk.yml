@@ -1,0 +1,9 @@
+# 1. Instalar dependencias de Capacitor
+npm install @capacitor/core @capacitor/cli @capacitor/android
+
+# 2. Inicializar Capacitor
+npx cap init "Degv's Messenger" com.degvs.messenger --web-dir dist
+# (Asegúrate de que '--web-dir' apunte a la carpeta donde tu proyecto compila los archivos HTML/JS, ej: build, dist, www)
+
+# 3. Agregar la plataforma Android
+npx cap add android
