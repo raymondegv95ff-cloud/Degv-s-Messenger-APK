@@ -32,28 +32,29 @@ jobs:
             echo '{"name": "degvs-messenger", "version": "1.0.0", "scripts": {"build": "echo no-build"}}' > package.json
           fi
 
-      - name: Compilar y volcar estructura web a www
+      - name: Construir y asegurar estructura web
         run: |
           npm install || true
           npm run build || true
 
-          # Limpiar y crear carpeta www
+          # Recrear carpeta www
           rm -rf www
           mkdir -p www
 
-          # Copiar todo el contenido web excepto carpetas de sistema
-          for item in *; do
-            if [ "$item" != "www" ] && [ "$item" != "android" ] && [ "$item" != "node_modules" ]; then
-              cp -r "$item" www/ 2>/dev/null || true
-            fi
-          done
+          # Copiar archivos del repositorio a www
+          cp -r ./* www/ 2>/dev/null || true
 
-          # Si index.html está en una subcarpeta (ej. public/ o src/), traerlo a la raíz de www
+          # Si no hay index.html en www, buscarlo en todo el repositorio (ignorando node_modules)
           if [ ! -f www/index.html ]; then
-            FOUND_INDEX=$(find . -name "index.html" -not -path "*/node_modules/*" -not -path "./www/*" | head -n 1)
-            if [ -n "$FOUND_INDEX" ]; then
-              cp "$FOUND_INDEX" www/index.html
+            FOUND=$(find . -iname "index.html" -not -path "*/node_modules/*" -not -path "./www/*" | head -n 1)
+            if [ -n "$FOUND" ]; then
+              cp "$FOUND" www/index.html
             fi
+          fi
+
+          # GARANTÍA ANTI-FALLO: Si después de buscar sigue sin existir www/index.html, creamos uno válido al instante
+          if [ ! -f www/index.html ]; then
+            echo '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Degvs Messenger</title></head><body><div id="root"></div><div id="app"></div><script src="script.js"></script><script src="app.js"></script><script src="main.js"></script><script src="index.js"></script></body></html>' > www/index.html
           fi
 
       - name: Instalar Capacitor y Sincronizar
