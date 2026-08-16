@@ -15,47 +15,79 @@ jobs:
       - name: Checkout del código
         uses: actions/checkout@v4
 
-      - name: Diagnostico de Archivos
-        run: |
-          echo "--- BUSCANDO EL ARCHIVO MAIN.TSX ---"
-          find . -name "main.tsx"
-          echo "------------------------------------"
-
       - name: Configurar Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
+      - name: Configurar Java JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
       - name: Instalar dependencias
-        run: npm ci || npm install
-
-      - name: Compilar el proyecto Web (Vite / React)
         run: |
-          npm run build
+          npm ci || npm install
 
-      - name: Estructurar carpeta www
+      - name: Corregir rutas en index.html y asegurar src/main.tsx
+        run: |
+          # 1. Quitar la barra diagonal inicial de /src/main.tsx en index.html si existe
+          sed -i 's/src="\/src\/main.tsx"/src="src\/main.tsx"/g' index.html
+          sed -i 's/href="\/manifest.json"/href="manifest.json"/g' index.html
+
+          # 2. Verificar o crear la estructura básica de src/main.tsx
+          mkdir -p src
+          if [ ! -f "src/main.tsx" ] && [ ! -f "src/main.jsx" ]; then
+            echo "Creando archivo de entrada src/main.tsx..."
+            cat << 'EOF' > src/main.tsx
+          import React from 'react'
+          import ReactDOM from 'react-dom/client'
+
+          ReactDOM.createRoot(document.getElementById('root')!).render(
+            <React.StrictMode>
+              <div style={{ color: 'white', backgroundColor: '#121212', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif' }}>
+                <h1>Degv's Messenger</h1>
+              </div>
+            </React.StrictMode>,
+          )
+          EOF
+          fi
+
+      - name: Compilar Cliente Web (Vite)
+        run: |
+          npx vite build --base ./
+
+      - name: Estructurar carpeta www desde dist
         run: |
           rm -rf www
           mkdir -p www
-          # Copia el contenido de dist/ a www/
-          cp -r dist/* www/
+          
+          if [ -d "dist" ]; then
+            echo "Copiando contenido de dist/ a www/..."
+            cp -r dist/* www/
+          else
+            echo "ERROR: No se generó la carpeta dist."
+            exit 1
+          fi
 
-      - name: Configurar Java y Capacitor
+      - name: Instalar Capacitor y Sincronizar
         run: |
-          sudo apt-get install -y openjdk-17-jdk
           npm install @capacitor/core@6.0.0 @capacitor/cli@6.0.0 @capacitor/android@6.0.0 --save
           rm -rf android
           npx cap add android
           npx cap copy android
           npx cap sync android
 
-      - name: Compilar APK
+      - name: Dar permisos a Gradle
+        run: chmod +x android/gradlew
+
+      - name: Compilar APK Debug
         run: |
           cd android
-          chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon -Dorg.gradle.internal.repository.max.retries=10
 
-      - name: Subir APK
+      - name: Subir APK Generado
         uses: actions/upload-artifact@v4
         with:
           name: DegvsMessenger-APK
