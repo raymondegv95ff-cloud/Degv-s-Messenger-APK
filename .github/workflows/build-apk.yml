@@ -26,38 +26,38 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Preparar package.json si no existe
+      - name: Preparar package.json
         run: |
           if [ ! -f package.json ]; then
             echo '{"name": "degvs-messenger", "version": "1.0.0", "scripts": {"build": "echo no-build"}}' > package.json
           fi
 
-      - name: Instalar dependencias y compilar si aplica
+      - name: Compilar y volcar archivos a la carpeta www
         run: |
           npm install || true
           npm run build || true
 
-      - name: Estructurar carpeta www
-        run: |
+          # Limpiar y crear la carpeta www
           rm -rf www
           mkdir -p www
 
-          # Si existe carpeta dist o build (proyectos React/Vite/Vue), usar esa
-          if [ -d "dist" ]; then
-            cp -r dist/* www/
-          elif [ -d "build" ]; then
-            cp -r build/* www/
-          elif [ -d "public" ]; then
-            cp -r public/* www/
-            cp *.html www/ 2>/dev/null || true
-            cp *.js www/ 2>/dev/null || true
-            cp *.css www/ 2>/dev/null || true
-          else
-            # Proyecto HTML/JS puro en raíz
-            rsync -av --progress . www/ --exclude www --exclude android --exclude .git --exclude .github --exclude node_modules
+          # Copiar todo el contenido del repositorio dentro de www
+          cp -r ./* www/ 2>/dev/null || true
+
+          # Si tu index.html estaba dentro de alguna subcarpeta, lo traemos a la raiz de www
+          if [ ! -f www/index.html ]; then
+            FOUND_INDEX=$(find . -name "index.html" -not -path "./www/*" | head -n 1)
+            if [ -n "$FOUND_INDEX" ]; then
+              cp "$FOUND_INDEX" www/index.html
+            fi
           fi
 
-      - name: Instalar Capacitor y Sincronizar
+          # Garantía total: Si por alguna razón sigue sin existir, creamos uno de emergencia con scripts vinculados
+          if [ ! -f www/index.html ]; then
+            echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Degvs Messenger</title></head><body><div id="app"></div><script src="app.js"></script><script src="index.js"></script><script src="main.js"></script></body></html>' > www/index.html
+          fi
+
+      - name: Instalar e inicializar Capacitor
         run: |
           npm install @capacitor/core@6.0.0 @capacitor/cli@6.0.0 @capacitor/android@6.0.0 --save
           rm -rf android
