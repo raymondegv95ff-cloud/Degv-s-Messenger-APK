@@ -1,3 +1,4 @@
+
 name: Compilar APK Nativa
 
 on:
@@ -32,32 +33,27 @@ jobs:
             echo '{"name": "degvs-messenger", "version": "1.0.0", "scripts": {"build": "echo no-build"}}' > package.json
           fi
 
-      - name: Compilar y volcar archivos a la carpeta www
+      - name: Preparar entorno y empaquetar código limpio
         run: |
           npm install || true
           npm run build || true
 
-          # Limpiar y crear la carpeta www
+          # Limpiar carpeta www
           rm -rf www
           mkdir -p www
 
-          # Copiar todo el contenido del repositorio dentro de www
-          cp -r ./* www/ 2>/dev/null || true
+          # Copiar todo el repositorio EXCLUYENDO node_modules, android y git
+          rsync -av --progress . www/ --exclude www --exclude android --exclude .git --exclude .github --exclude node_modules
 
-          # Si tu index.html estaba dentro de alguna subcarpeta, lo traemos a la raiz de www
+          # Buscar el index.html REAL fuera de node_modules
           if [ ! -f www/index.html ]; then
-            FOUND_INDEX=$(find . -name "index.html" -not -path "./www/*" | head -n 1)
-            if [ -n "$FOUND_INDEX" ]; then
-              cp "$FOUND_INDEX" www/index.html
+            REAL_INDEX=$(find . -maxdepth 3 -name "index.html" -not -path "*/node_modules/*" -not -path "./www/*" | head -n 1)
+            if [ -n "$REAL_INDEX" ]; then
+              cp "$REAL_INDEX" www/index.html
             fi
           fi
 
-          # Garantía total: Si por alguna razón sigue sin existir, creamos uno de emergencia con scripts vinculados
-          if [ ! -f www/index.html ]; then
-            echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Degvs Messenger</title></head><body><div id="app"></div><script src="app.js"></script><script src="index.js"></script><script src="main.js"></script></body></html>' > www/index.html
-          fi
-
-      - name: Instalar e inicializar Capacitor
+      - name: Instalar Capacitor y Sincronizar
         run: |
           npm install @capacitor/core@6.0.0 @capacitor/cli@6.0.0 @capacitor/android@6.0.0 --save
           rm -rf android
