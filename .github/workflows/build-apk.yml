@@ -34,12 +34,11 @@ jobs:
         run: |
           npm run build
 
-      - name: Estructurar carpeta www desde dist/build
+      - name: Estructurar carpeta www desde dist
         run: |
           rm -rf www
           mkdir -p www
           
-          # Verificar si Vite/React generó la carpeta dist o build
           if [ -d "dist" ]; then
             echo "Copiando carpeta dist a www..."
             cp -r dist/* www/
@@ -47,9 +46,8 @@ jobs:
             echo "Copiando carpeta build a www..."
             cp -r build/* www/
           else
-            echo "No se encontró dist/build, copiando raíz..."
-            cp -r ./* www/ 2>/dev/null || true
-            rm -rf www/android www/node_modules www/.git www/.github
+            echo "ERROR: No se encontró la carpeta dist o build tras la compilación."
+            exit 1
           fi
 
       - name: Instalar Capacitor y Sincronizar
