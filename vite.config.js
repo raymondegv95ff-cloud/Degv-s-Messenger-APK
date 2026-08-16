@@ -3,5 +3,10 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: './', // <-- ESTO genera las rutas relativas en la carpeta dist/ para Capacitor
+  base: './', // Esto es vital
+  build: {
+    rollupOptions: {
+      input: 'index.html' // Le decimos explícitamente dónde empezar
+    }
+  }
 })
