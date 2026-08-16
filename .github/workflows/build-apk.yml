@@ -15,10 +15,10 @@ jobs:
       - name: Checkout del código
         uses: actions/checkout@v4
 
-      - name: Configurar Node.js 20
+      - name: Configurar Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Configurar Java JDK 21
         uses: actions/setup-java@v4
@@ -28,50 +28,43 @@ jobs:
 
       - name: Instalar dependencias
         run: |
-          npm ci || npm install
+          npm install
 
-      - name: Corregir rutas en index.html y asegurar src/main.tsx
+      - name: Corregir archivos de entrada React (main.tsx / App.tsx)
         run: |
-          # 1. Quitar la barra diagonal inicial de /src/main.tsx en index.html si existe
-          sed -i 's/src="\/src\/main.tsx"/src="src\/main.tsx"/g' index.html
-          sed -i 's/href="\/manifest.json"/href="manifest.json"/g' index.html
-
-          # 2. Verificar o crear la estructura básica de src/main.tsx
           mkdir -p src
-          if [ ! -f "src/main.tsx" ] && [ ! -f "src/main.jsx" ]; then
-            echo "Creando archivo de entrada src/main.tsx..."
-            cat << 'EOF' > src/main.tsx
-          import React from 'react'
-          import ReactDOM from 'react-dom/client'
 
-          ReactDOM.createRoot(document.getElementById('root')!).render(
-            <React.StrictMode>
-              <div style={{ color: 'white', backgroundColor: '#121212', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif' }}>
+          # 1. Verificar/crear App.tsx si no existe para satisfacer main.tsx
+          if [ ! -f "src/App.tsx" ] && [ ! -f "src/App.jsx" ]; then
+            echo "Creando src/App.tsx de respaldo..."
+            cat << 'EOF' > src/App.tsx
+          import React from 'react'
+
+          export default function App() {
+            return (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', backgroundColor: '#050505', color: '#00E676', fontFamily: 'sans-serif' }}>
                 <h1>Degv's Messenger</h1>
               </div>
-            </React.StrictMode>,
-          )
+            )
+          }
           EOF
           fi
 
-      - name: Compilar Cliente Web (Vite)
+          # 2. Corregir rutas en index.html
+          sed -i 's|src="/src/main.tsx"|src="src/main.tsx"|g' index.html
+          sed -i 's|href="/manifest.json"|href="manifest.json"|g' index.html
+
+      - name: Compilar Cliente Web con Vite
         run: |
           npx vite build --base ./
 
-      - name: Estructurar carpeta www desde dist
+      - name: Preparar carpeta www para Capacitor
         run: |
           rm -rf www
           mkdir -p www
-          
-          if [ -d "dist" ]; then
-            echo "Copiando contenido de dist/ a www/..."
-            cp -r dist/* www/
-          else
-            echo "ERROR: No se generó la carpeta dist."
-            exit 1
-          fi
+          cp -r dist/* www/
 
-      - name: Instalar Capacitor y Sincronizar
+      - name: Configurar e Instalar Capacitor Android
         run: |
           npm install @capacitor/core@6.0.0 @capacitor/cli@6.0.0 @capacitor/android@6.0.0 --save
           rm -rf android
@@ -79,15 +72,15 @@ jobs:
           npx cap copy android
           npx cap sync android
 
-      - name: Dar permisos a Gradle
+      - name: Otorgar permisos de ejecución a Gradle
         run: chmod +x android/gradlew
 
-      - name: Compilar APK Debug
+      - name: Compilar APK Debug de Android
         run: |
           cd android
-          ./gradlew assembleDebug --no-daemon -Dorg.gradle.internal.repository.max.retries=10
+          ./gradlew assembleDebug --no-daemon
 
-      - name: Subir APK Generado
+      - name: Subir APK Generado como Artefacto
         uses: actions/upload-artifact@v4
         with:
           name: DegvsMessenger-APK
