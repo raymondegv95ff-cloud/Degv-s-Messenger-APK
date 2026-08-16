@@ -26,16 +26,31 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Preparar entorno
+      - name: Instalar dependencias del proyecto
         run: |
-          npm install || true
-          
-      - name: Estructurar carpeta www
+          npm ci || npm install
+
+      - name: Compilar el proyecto Web (Vite / React)
+        run: |
+          npm run build
+
+      - name: Estructurar carpeta www desde dist/build
         run: |
           rm -rf www
           mkdir -p www
-          cp -r ./* www/ 2>/dev/null || true
-          rm -rf www/android www/node_modules www/.git www/.github
+          
+          # Verificar si Vite/React generó la carpeta dist o build
+          if [ -d "dist" ]; then
+            echo "Copiando carpeta dist a www..."
+            cp -r dist/* www/
+          elif [ -d "build" ]; then
+            echo "Copiando carpeta build a www..."
+            cp -r build/* www/
+          else
+            echo "No se encontró dist/build, copiando raíz..."
+            cp -r ./* www/ 2>/dev/null || true
+            rm -rf www/android www/node_modules www/.git www/.github
+          fi
 
       - name: Instalar Capacitor y Sincronizar
         run: |
@@ -48,10 +63,10 @@ jobs:
       - name: Dar permisos a Gradle
         run: chmod +x android/gradlew
 
-      - name: Compilar APK Debug (Con reintentos de red)
+      - name: Compilar APK Debug
         run: |
           cd android
-          ./gradlew assembleDebug --no-daemon --stacktrace -Dorg.gradle.internal.repository.max.retries=10
+          ./gradlew assembleDebug --no-daemon -Dorg.gradle.internal.repository.max.retries=10
 
       - name: Subir APK Generado
         uses: actions/upload-artifact@v4
