@@ -15,92 +15,47 @@ jobs:
       - name: Checkout del código
         uses: actions/checkout@v4
 
+      - name: Diagnostico de Archivos
+        run: |
+          echo "--- BUSCANDO EL ARCHIVO MAIN.TSX ---"
+          find . -name "main.tsx"
+          echo "------------------------------------"
+
       - name: Configurar Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Configurar Java JDK 21
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-
-      - name: Verificar y corregir punto de entrada src/main.tsx
-        run: |
-          echo "--- Verificando contenido de la carpeta src ---"
-          ls -la src/ || echo "La carpeta src no existe aún"
-          echo "-----------------------------------------------"
-
-          # Si no existe la carpeta src, la creamos
-          mkdir -p src
-
-          # Si el archivo src/main.tsx no existe pero hay un main.jsx o index.tsx, hacemos un enlace
-          if [ ! -f "src/main.tsx" ]; then
-            if [ -f "src/main.jsx" ]; then
-              cp src/main.jsx src/main.tsx
-            elif [ -f "src/index.tsx" ]; then
-              cp src/index.tsx src/main.tsx
-            elif [ -f "src/App.tsx" ]; then
-              cp src/App.tsx src/main.tsx
-            else
-              echo "Creando un src/main.tsx base para evitar el fallo de Vite..."
-              cat << 'EOF' > src/main.tsx
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <div style={{ color: 'white', backgroundColor: '#121212', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif' }}>
-      <h1>Degv's Messenger Iniciado</h1>
-    </div>
-  </React.StrictMode>,
-)
-EOF
-            fi
-          fi
-
-      - name: Instalar dependencias del proyecto
-        run: |
-          npm ci || npm install
+      - name: Instalar dependencias
+        run: npm ci || npm install
 
       - name: Compilar el proyecto Web (Vite / React)
         run: |
           npm run build
 
-      - name: Estructurar carpeta www desde dist
+      - name: Estructurar carpeta www
         run: |
           rm -rf www
           mkdir -p www
-          
-          if [ -d "dist" ]; then
-            echo "Copiando carpeta dist a www..."
-            cp -r dist/* www/
-          elif [ -d "build" ]; then
-            echo "Copiando carpeta build a www..."
-            cp -r build/* www/
-          else
-            echo "ERROR: No se encontró la carpeta dist o build tras la compilación."
-            exit 1
-          fi
+          # Copia el contenido de dist/ a www/
+          cp -r dist/* www/
 
-      - name: Instalar Capacitor y Sincronizar
+      - name: Configurar Java y Capacitor
         run: |
+          sudo apt-get install -y openjdk-17-jdk
           npm install @capacitor/core@6.0.0 @capacitor/cli@6.0.0 @capacitor/android@6.0.0 --save
           rm -rf android
           npx cap add android
           npx cap copy android
           npx cap sync android
 
-      - name: Dar permisos a Gradle
-        run: chmod +x android/gradlew
-
-      - name: Compilar APK Debug
+      - name: Compilar APK
         run: |
           cd android
-          ./gradlew assembleDebug --no-daemon -Dorg.gradle.internal.repository.max.retries=10
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
 
-      - name: Subir APK Generado
+      - name: Subir APK
         uses: actions/upload-artifact@v4
         with:
           name: DegvsMessenger-APK
