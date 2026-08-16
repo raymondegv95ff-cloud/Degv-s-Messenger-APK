@@ -1,4 +1,3 @@
-
 name: Compilar APK Nativa
 
 on:
@@ -33,23 +32,27 @@ jobs:
             echo '{"name": "degvs-messenger", "version": "1.0.0", "scripts": {"build": "echo no-build"}}' > package.json
           fi
 
-      - name: Preparar entorno y empaquetar código limpio
+      - name: Compilar y volcar estructura web a www
         run: |
           npm install || true
           npm run build || true
 
-          # Limpiar carpeta www
+          # Limpiar y crear carpeta www
           rm -rf www
           mkdir -p www
 
-          # Copiar todo el repositorio EXCLUYENDO node_modules, android y git
-          rsync -av --progress . www/ --exclude www --exclude android --exclude .git --exclude .github --exclude node_modules
+          # Copiar todo el contenido web excepto carpetas de sistema
+          for item in *; do
+            if [ "$item" != "www" ] && [ "$item" != "android" ] && [ "$item" != "node_modules" ]; then
+              cp -r "$item" www/ 2>/dev/null || true
+            fi
+          done
 
-          # Buscar el index.html REAL fuera de node_modules
+          # Si index.html está en una subcarpeta (ej. public/ o src/), traerlo a la raíz de www
           if [ ! -f www/index.html ]; then
-            REAL_INDEX=$(find . -maxdepth 3 -name "index.html" -not -path "*/node_modules/*" -not -path "./www/*" | head -n 1)
-            if [ -n "$REAL_INDEX" ]; then
-              cp "$REAL_INDEX" www/index.html
+            FOUND_INDEX=$(find . -name "index.html" -not -path "*/node_modules/*" -not -path "./www/*" | head -n 1)
+            if [ -n "$FOUND_INDEX" ]; then
+              cp "$FOUND_INDEX" www/index.html
             fi
           fi
 
