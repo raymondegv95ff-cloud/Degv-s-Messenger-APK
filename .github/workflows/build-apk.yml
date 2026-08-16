@@ -26,21 +26,29 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Instalar Capacitor
+      - name: Crear package.json si no existe
+        run: |
+          if [ ! -f package.json ]; then
+            echo '{"name": "degvs-messenger", "version": "1.0.0"}' > package.json
+          fi
+
+      - name: Instalar e Inicializar Capacitor desde Cero
         run: |
           npm install @capacitor/core @capacitor/cli @capacitor/android
-          npx cap add android || true
-          npx cap sync android || true
+          npx cap init "Degvs Messenger" "com.degvs.messenger" --web-dir "."
+          rm -rf android
+          npx cap add android
+          npx cap sync android
 
-      - name: Permisos de Gradle
-        run: chmod +x android/gradlew || true
+      - name: Dar permisos de ejecucion a Gradle
+        run: chmod +x android/gradlew
 
       - name: Compilar APK Debug
         run: |
           cd android
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --stacktrace
 
-      - name: Subir APK
+      - name: Subir APK Generado
         uses: actions/upload-artifact@v4
         with:
           name: DegvsMessenger-v1-debug
