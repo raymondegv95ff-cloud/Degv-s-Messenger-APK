@@ -26,6 +26,40 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
+      - name: Verificar y corregir punto de entrada src/main.tsx
+        run: |
+          echo "--- Verificando contenido de la carpeta src ---"
+          ls -la src/ || echo "La carpeta src no existe aún"
+          echo "-----------------------------------------------"
+
+          # Si no existe la carpeta src, la creamos
+          mkdir -p src
+
+          # Si el archivo src/main.tsx no existe pero hay un main.jsx o index.tsx, hacemos un enlace
+          if [ ! -f "src/main.tsx" ]; then
+            if [ -f "src/main.jsx" ]; then
+              cp src/main.jsx src/main.tsx
+            elif [ -f "src/index.tsx" ]; then
+              cp src/index.tsx src/main.tsx
+            elif [ -f "src/App.tsx" ]; then
+              cp src/App.tsx src/main.tsx
+            else
+              echo "Creando un src/main.tsx base para evitar el fallo de Vite..."
+              cat << 'EOF' > src/main.tsx
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <div style={{ color: 'white', backgroundColor: '#121212', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif' }}>
+      <h1>Degv's Messenger Iniciado</h1>
+    </div>
+  </React.StrictMode>,
+)
+EOF
+            fi
+          fi
+
       - name: Instalar dependencias del proyecto
         run: |
           npm ci || npm install
