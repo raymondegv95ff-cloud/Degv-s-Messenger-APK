@@ -30,11 +30,28 @@ jobs:
         run: |
           npm install
 
-      - name: Corregir archivos de entrada React (main.tsx / App.tsx)
+      - name: Garantizar archivos requeridos por main.tsx (App.tsx e index.css)
         run: |
           mkdir -p src
 
-          # 1. Verificar/crear App.tsx si no existe para satisfacer main.tsx
+          # 1. Crear index.css si no existe
+          if [ ! -f "src/index.css" ]; then
+            echo "Creando src/index.css de respaldo..."
+            cat << 'EOF' > src/index.css
+          @tailwind base;
+          @tailwind components;
+          @tailwind utilities;
+
+          body {
+            margin: 0;
+            background-color: #050505;
+            color: #f1f5f9;
+            font-family: system-ui, -apple-system, sans-serif;
+          }
+          EOF
+          fi
+
+          # 2. Crear App.tsx si no existe
           if [ ! -f "src/App.tsx" ] && [ ! -f "src/App.jsx" ]; then
             echo "Creando src/App.tsx de respaldo..."
             cat << 'EOF' > src/App.tsx
@@ -42,7 +59,7 @@ jobs:
 
           export default function App() {
             return (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', backgroundColor: '#050505', color: '#00E676', fontFamily: 'sans-serif' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', backgroundColor: '#050505', color: '#00E676' }}>
                 <h1>Degv's Messenger</h1>
               </div>
             )
@@ -50,7 +67,7 @@ jobs:
           EOF
           fi
 
-          # 2. Corregir rutas en index.html
+          # 3. Asegurar rutas relativas en index.html
           sed -i 's|src="/src/main.tsx"|src="src/main.tsx"|g' index.html
           sed -i 's|href="/manifest.json"|href="manifest.json"|g' index.html
 
