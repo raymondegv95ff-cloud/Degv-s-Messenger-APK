@@ -34,7 +34,6 @@ jobs:
         run: |
           rm -rf www
           mkdir -p www
-          # Copiamos todo excepto las carpetas de sistema
           cp -r ./* www/ 2>/dev/null || true
           rm -rf www/android www/node_modules www/.git www/.github
 
@@ -49,10 +48,10 @@ jobs:
       - name: Dar permisos a Gradle
         run: chmod +x android/gradlew
 
-      - name: Compilar APK Debug
+      - name: Compilar APK Debug (Con reintentos de red)
         run: |
           cd android
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon --stacktrace -Dorg.gradle.internal.repository.max.retries=10
 
       - name: Subir APK Generado
         uses: actions/upload-artifact@v4
