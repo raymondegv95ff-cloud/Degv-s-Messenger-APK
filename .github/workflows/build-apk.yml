@@ -26,20 +26,34 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Preparar entorno y carpeta web
+      - name: Preparar archivo package.json
         run: |
           if [ ! -f package.json ]; then
             echo '{"name": "degvs-messenger", "version": "1.0.0", "scripts": {"build": "echo no-build"}}' > package.json
           fi
-          
+
+      - name: Preparar carpeta web y asegurar index.html
+        run: |
           npm install || true
           npm run build || true
 
-          # Crear directorio www y copiar archivos estáticos
+          # Crear directorio www
           mkdir -p www
-          rsync -av --progress . www/ --exclude www --exclude android --exclude .git --exclude .github --exclude node_modules || true
 
-      - name: Instalar Capacitor y crear proyecto Android
+          # Copiar todo el contenido al directorio www
+          cp -r ./* www/ 2>/dev/null || true
+
+          # Si index.html no quedo en la raíz de www, buscarlo o crear uno de rescate
+          if [ ! -f www/index.html ]; then
+            INDEX_PATH=$(find . -maxdepth 3 -name "index.html" | head -n 1)
+            if [ -n "$INDEX_PATH" ]; then
+              cp "$INDEX_PATH" www/index.html
+            else
+              echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Degvs Messenger</title></head><body><div id="root"></div><h1>Degvs Messenger</h1></body></html>' > www/index.html
+            fi
+          fi
+
+      - name: Instalar e inicializar Capacitor
         run: |
           npm install @capacitor/core@6.0.0 @capacitor/cli@6.0.0 @capacitor/android@6.0.0 --save
           rm -rf android
