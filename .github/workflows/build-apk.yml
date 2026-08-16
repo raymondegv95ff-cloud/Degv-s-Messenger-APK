@@ -20,42 +20,28 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Configurar Java JDK 21
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-
-      - name: Preparar package.json
-        run: |
-          if [ ! -f package.json ]; then
-            echo '{"name": "degvs-messenger", "version": "1.0.0", "scripts": {"build": "echo no-build"}}' > package.json
-          fi
-
-      - name: Construir y asegurar estructura web
+      - name: Construir proyecto
         run: |
           npm install || true
           npm run build || true
 
-          # Recrear carpeta www
+      - name: Estructurar carpeta www correctamente
+        run: |
           rm -rf www
           mkdir -p www
-
-          # Copiar archivos del repositorio a www
-          cp -r ./* www/ 2>/dev/null || true
-
-          # Si no hay index.html en www, buscarlo en todo el repositorio (ignorando node_modules)
-          if [ ! -f www/index.html ]; then
-            FOUND=$(find . -iname "index.html" -not -path "*/node_modules/*" -not -path "./www/*" | head -n 1)
-            if [ -n "$FOUND" ]; then
-              cp "$FOUND" www/index.html
-            fi
+          
+          # Prioridad: Si existe carpeta dist o build, usar eso
+          if [ -d "dist" ]; then cp -r dist/* www/;
+          elif [ -d "build" ]; then cp -r build/* www/;
+          else
+            # Si no hay build, copiar todo lo que no sea de sistema
+            cp -r ./* www/ 2>/dev/null || true
+            rm -rf www/android www/node_modules www/.git www/.github
           fi
-
-          # GARANTÍA ANTI-FALLO: Si después de buscar sigue sin existir www/index.html, creamos uno válido al instante
-          if [ ! -f www/index.html ]; then
-            echo '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Degvs Messenger</title></head><body><div id="root"></div><div id="app"></div><script src="script.js"></script><script src="app.js"></script><script src="main.js"></script><script src="index.js"></script></body></html>' > www/index.html
-          fi
+          
+          # Verificación: Listar qué archivos quedaron en www para ver si está tu index.html
+          echo "Archivos encontrados en la carpeta www:"
+          ls -R www/
 
       - name: Instalar Capacitor y Sincronizar
         run: |
@@ -65,15 +51,13 @@ jobs:
           npx cap copy android
           npx cap sync android
 
-      - name: Dar permisos a Gradle
-        run: chmod +x android/gradlew
-
-      - name: Compilar APK Debug
+      - name: Compilar APK
         run: |
+          chmod +x android/gradlew
           cd android
           ./gradlew assembleDebug --no-daemon
 
-      - name: Subir APK Generado
+      - name: Subir APK
         uses: actions/upload-artifact@v4
         with:
           name: DegvsMessenger-v1-debug
