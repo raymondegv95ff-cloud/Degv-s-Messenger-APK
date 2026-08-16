@@ -30,40 +30,52 @@ jobs:
         run: |
           npm install
 
-      - name: Garantizar archivos requeridos por main.tsx (App.tsx e index.css)
+      - name: Garantizar archivos y servicios requeridos por App.tsx
         run: |
-          mkdir -p src
+          mkdir -p src/services
 
           # 1. Crear index.css si no existe
           if [ ! -f "src/index.css" ]; then
-            echo "Creando src/index.css de respaldo..."
+            echo "Creando src/index.css..."
             cat << 'EOF' > src/index.css
           @tailwind base;
           @tailwind components;
           @tailwind utilities;
-
-          body {
-            margin: 0;
-            background-color: #050505;
-            color: #f1f5f9;
-            font-family: system-ui, -apple-system, sans-serif;
-          }
+          body { margin: 0; background-color: #050505; color: #f1f5f9; }
           EOF
           fi
 
-          # 2. Crear App.tsx si no existe
-          if [ ! -f "src/App.tsx" ] && [ ! -f "src/App.jsx" ]; then
-            echo "Creando src/App.tsx de respaldo..."
-            cat << 'EOF' > src/App.tsx
-          import React from 'react'
+          # 2. Crear storageService.ts de respaldo si no existe
+          if [ ! -f "src/services/storageService.ts" ] && [ ! -f "src/services/storageService.js" ]; then
+            echo "Creando src/services/storageService.ts de respaldo..."
+            cat << 'EOF' > src/services/storageService.ts
+          export const storageService = {
+            getItem: (key: string) => {
+              try {
+                const item = localStorage.getItem(key);
+                return item ? JSON.parse(item) : null;
+              } catch {
+                return null;
+              }
+            },
+            setItem: (key: string, value: any) => {
+              try {
+                localStorage.setItem(key, JSON.stringify(value));
+              } catch (e) {
+                console.error('Storage error:', e);
+              }
+            },
+            removeItem: (key: string) => {
+              try {
+                localStorage.removeItem(key);
+              } catch (e) {
+                console.error('Storage remove error:', e);
+              }
+            },
+            clear: () => localStorage.clear()
+          };
 
-          export default function App() {
-            return (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', backgroundColor: '#050505', color: '#00E676' }}>
-                <h1>Degv's Messenger</h1>
-              </div>
-            )
-          }
+          export default storageService;
           EOF
           fi
 
