@@ -1,0 +1,7 @@
+// metadata.json
+{
+  "name": "Degv's Messenger",
+  "description": "Aplicación de mensajería instantánea con IA (Degv's AI), Smart Reply con detección de entidades, Limpiador de Espacio local (IndexedDB) para multimedia, Centro de Actualización Multi-Plataforma, enlace con Ionic Appflow, GitHub/Antigravity, Termux, Capacitor y Bubblewrap.",
+  "requestFramePermissions": ["camera", "microphone", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
