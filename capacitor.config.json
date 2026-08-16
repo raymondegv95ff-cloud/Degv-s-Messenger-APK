@@ -1,6 +1,5 @@
 {
   "appId": "com.degvs.messenger",
-  "appName": "Degv's Messenger",
-  "webDir": ".",
-  "bundledWebRuntime": false
+  "appName": "DegvsMessenger",
+  "webDir": "."
 }
