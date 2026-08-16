@@ -1,4 +1,4 @@
-name: Compilar APK Nativa
+name: Diagnostico de Archivos
 
 on:
   push:
@@ -8,68 +8,17 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-android:
+  diagnostico:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout del código
         uses: actions/checkout@v4
 
-      - name: Configurar Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Configurar Java JDK 21
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '21'
-
-      - name: Preparar entorno
+      - name: Listar todos los archivos del repositorio
         run: |
-          if [ ! -f package.json ]; then
-            echo '{"name": "degvs-messenger", "version": "1.0.0", "scripts": {"build": "echo no-build"}}' > package.json
-          fi
-          npm install || true
-          npm run build || true
-
-      - name: Construir y estructurar carpeta www
-        run: |
-          rm -rf www
-          mkdir -p www
-          
-          # BUSCAR ARCHIVOS: Busca el primer index.html en el repositorio (excepto carpetas de sistema)
-          INDEX_FILE=$(find . -maxdepth 3 -name "index.html" -not -path "./www/*" -not -path "*/node_modules/*" -not -path "./android/*" -not -path "./.git/*" | head -n 1)
-
-          if [ -n "$INDEX_FILE" ]; then
-            echo "¡Archivo encontrado en: $INDEX_FILE! Copiando contenido..."
-            # Copiar el contenido de la carpeta donde se encontró el index.html a www
-            cp -r $(dirname "$INDEX_FILE")/* www/
-          else
-            echo "ERROR: No se encontró un archivo index.html en tu repositorio."
-            echo "Por favor, verifica que tu código fuente (HTML/JS) esté subido a GitHub."
-            exit 1
-          fi
-
-      - name: Instalar Capacitor y Sincronizar
-        run: |
-          npm install @capacitor/core@6.0.0 @capacitor/cli@6.0.0 @capacitor/android@6.0.0 --save
-          rm -rf android
-          npx cap add android
-          npx cap copy android
-          npx cap sync android
-
-      - name: Dar permisos a Gradle
-        run: chmod +x android/gradlew
-
-      - name: Compilar APK Debug
-        run: |
-          cd android
-          ./gradlew assembleDebug --no-daemon
-
-      - name: Subir APK Generado
-        uses: actions/upload-artifact@v4
-        with:
-          name: DegvsMessenger-v1-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          echo "--- ESTRUCTURA DE ARCHIVOS EN TU REPOSITORIO ---"
+          find . -maxdepth 4 -not -path '*/.*'
+          echo "-----------------------------------------------"
+          echo "Si ves tu index.html en la lista, dime en qué ruta aparece."
+          echo "Si no lo ves, es que no has subido tus archivos de código a esta rama."
+          exit 1
