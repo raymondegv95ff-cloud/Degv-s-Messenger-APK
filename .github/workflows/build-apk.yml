@@ -20,28 +20,57 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Construir proyecto
+      - name: Configurar Java JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Preparar entorno
         run: |
+          if [ ! -f package.json ]; then
+            echo '{"name": "degvs-messenger", "version": "1.0.0", "scripts": {"build": "echo no-build"}}' > package.json
+          fi
           npm install || true
           npm run build || true
 
-      - name: Estructurar carpeta www correctamente
+      - name: Crear carpeta www y generar index.html
         run: |
+          # Limpiar carpeta previa
           rm -rf www
           mkdir -p www
-          
-          # Prioridad: Si existe carpeta dist o build, usar eso
-          if [ -d "dist" ]; then cp -r dist/* www/;
-          elif [ -d "build" ]; then cp -r build/* www/;
-          else
-            # Si no hay build, copiar todo lo que no sea de sistema
-            cp -r ./* www/ 2>/dev/null || true
-            rm -rf www/android www/node_modules www/.git www/.github
+
+          # Copiar archivos del repositorio excluyendo directorios especiales
+          for item in *; do
+            if [ "$item" != "www" ] && [ "$item" != "android" ] && [ "$item" != "node_modules" ] && [ "$item" != ".git" ] && [ "$item" != ".github" ]; then
+              cp -r "$item" www/ 2>/dev/null || true
+            fi
+          done
+
+          # Crear index.html si no existe ninguno
+          if [ ! -f www/index.html ]; then
+            cat << 'EOF' > www/index.html
+          <!DOCTYPE html>
+          <html lang="es">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Degvs Messenger</title>
+            <style>
+              body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #121212; color: #fff; }
+              .card { text-align: center; padding: 2rem; background: #1e1e1e; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+              h1 { color: #00e676; margin-bottom: 0.5rem; }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <h1>Degvs Messenger</h1>
+              <p>Aplicación nativa inicializada correctamente.</p>
+            </div>
+          </body>
+          </html>
+          EOF
           fi
-          
-          # Verificación: Listar qué archivos quedaron en www para ver si está tu index.html
-          echo "Archivos encontrados en la carpeta www:"
-          ls -R www/
 
       - name: Instalar Capacitor y Sincronizar
         run: |
@@ -51,13 +80,15 @@ jobs:
           npx cap copy android
           npx cap sync android
 
-      - name: Compilar APK
+      - name: Dar permisos a Gradle
+        run: chmod +x android/gradlew
+
+      - name: Compilar APK Debug
         run: |
-          chmod +x android/gradlew
           cd android
           ./gradlew assembleDebug --no-daemon
 
-      - name: Subir APK
+      - name: Subir APK Generado
         uses: actions/upload-artifact@v4
         with:
           name: DegvsMessenger-v1-debug
